@@ -201,7 +201,7 @@ class Job extends Entity
     {
         return $this->set('queue', $queue);
     }
-
+ 
     public function setGroup(?string $group): self
     {
         return $this->set('group', $group);
