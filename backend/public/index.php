@@ -2,15 +2,26 @@
 
 declare(strict_types=1);
 
+use App\Controllers\AuthController;
+use App\Controllers\AccountController;
+use App\Controllers\ContactController;
+use App\Controllers\LeadController;
+use App\Controllers\OpportunityController;
+use App\Controllers\MeetingController;
+use App\Controllers\TaskController;
+use App\Controllers\UserController;
+use App\Controllers\DashboardController;
+use App\Helpers\Response;
+
 // Autoloader
 spl_autoload_register(function (string $class) {
     $prefix = 'App\\';
-    $base   = __DIR__ . '/../src/';
+    $base = __DIR__ . '/../src/';
     if (strncmp($prefix, $class, strlen($prefix)) !== 0) {
         return;
     }
     $relative = substr($class, strlen($prefix));
-    $file     = $base . str_replace('\\', '/', $relative) . '.php';
+    $file = $base . str_replace('\\', '/', $relative) . '.php';
     if (file_exists($file)) {
         require $file;
     }
@@ -29,19 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-use App\Controllers\AuthController;
-use App\Controllers\AccountController;
-use App\Controllers\ContactController;
-use App\Controllers\LeadController;
-use App\Controllers\OpportunityController;
-use App\Controllers\MeetingController;
-use App\Controllers\TaskController;
-use App\Controllers\UserController;
-use App\Controllers\DashboardController;
-use App\Helpers\Response;
-
 // Parse URI
-$requestUri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 
 // Strip /api prefix if present
@@ -51,118 +51,145 @@ $path = rtrim($path, '/') ?: '/';
 // Route matching
 $segments = array_values(array_filter(explode('/', $path)));
 $resource = $segments[0] ?? '';
-$id       = isset($segments[1]) ? (int)$segments[1] : null;
-$subPath  = $segments[1] ?? null;
+$id = isset($segments[1]) && is_numeric($segments[1]) ? (int) $segments[1] : null;
+$subPath = $segments[1] ?? null;
 
 try {
     switch ($resource) {
         case 'auth':
             $controller = new AuthController();
-            match (true) {
-                $subPath === 'login'  && $requestMethod === 'POST' => $controller->login(),
-                $subPath === 'logout' && $requestMethod === 'POST' => $controller->logout(),
-                default => Response::error('Route not found', 404),
-            };
+            if ($subPath === 'login' && $requestMethod === 'POST') {
+                $controller->login();
+            } elseif ($subPath === 'logout' && $requestMethod === 'POST') {
+                $controller->logout();
+            } else {
+                Response::error('Route not found', 404);
+            }
             break;
 
         case 'dashboard':
             $controller = new DashboardController();
-            if ($requestMethod === 'GET') $controller->index();
-            else Response::error('Method not allowed', 405);
+            if ($requestMethod === 'GET')
+                $controller->index();
+            else
+                Response::error('Method not allowed', 405);
             break;
 
         case 'accounts':
             $controller = new AccountController();
-            match (true) {
-                $requestMethod === 'GET'    && $id === null => $controller->index(),
-                $requestMethod === 'GET'    && $id !== null => $controller->show($id),
-                $requestMethod === 'POST'   && $id === null => $controller->store(),
-                $requestMethod === 'PUT'    && $id !== null => $controller->update($id),
-                $requestMethod === 'DELETE' && $id !== null => $controller->destroy($id),
-                default => Response::error('Method not allowed', 405),
-            };
+            if ($requestMethod === 'GET' && $id === null)
+                $controller->index();
+            elseif ($requestMethod === 'GET' && $id !== null)
+                $controller->show($id);
+            elseif ($requestMethod === 'POST' && $id === null)
+                $controller->store();
+            elseif ($requestMethod === 'PUT' && $id !== null)
+                $controller->update($id);
+            elseif ($requestMethod === 'DELETE' && $id !== null)
+                $controller->destroy($id);
+            else
+                Response::error('Method not allowed', 405);
             break;
 
         case 'contacts':
             $controller = new ContactController();
-            match (true) {
-                $requestMethod === 'GET'    && $id === null => $controller->index(),
-                $requestMethod === 'GET'    && $id !== null => $controller->show($id),
-                $requestMethod === 'POST'   && $id === null => $controller->store(),
-                $requestMethod === 'PUT'    && $id !== null => $controller->update($id),
-                $requestMethod === 'DELETE' && $id !== null => $controller->destroy($id),
-                default => Response::error('Method not allowed', 405),
-            };
+            if ($requestMethod === 'GET' && $id === null)
+                $controller->index();
+            elseif ($requestMethod === 'GET' && $id !== null)
+                $controller->show($id);
+            elseif ($requestMethod === 'POST' && $id === null)
+                $controller->store();
+            elseif ($requestMethod === 'PUT' && $id !== null)
+                $controller->update($id);
+            elseif ($requestMethod === 'DELETE' && $id !== null)
+                $controller->destroy($id);
+            else
+                Response::error('Method not allowed', 405);
             break;
 
         case 'leads':
             $controller = new LeadController();
-            match (true) {
-                $requestMethod === 'GET'    && $id === null => $controller->index(),
-                $requestMethod === 'GET'    && $id !== null => $controller->show($id),
-                $requestMethod === 'POST'   && $id === null => $controller->store(),
-                $requestMethod === 'PUT'    && $id !== null => $controller->update($id),
-                $requestMethod === 'DELETE' && $id !== null => $controller->destroy($id),
-                default => Response::error('Method not allowed', 405),
-            };
+            if ($requestMethod === 'GET' && $id === null)
+                $controller->index();
+            elseif ($requestMethod === 'GET' && $id !== null)
+                $controller->show($id);
+            elseif ($requestMethod === 'POST' && $id === null)
+                $controller->store();
+            elseif ($requestMethod === 'PUT' && $id !== null)
+                $controller->update($id);
+            elseif ($requestMethod === 'DELETE' && $id !== null)
+                $controller->destroy($id);
+            else
+                Response::error('Method not allowed', 405);
             break;
 
         case 'opportunities':
             $controller = new OpportunityController();
-            match (true) {
-                $requestMethod === 'GET'    && $id === null => $controller->index(),
-                $requestMethod === 'GET'    && $id !== null => $controller->show($id),
-                $requestMethod === 'POST'   && $id === null => $controller->store(),
-                $requestMethod === 'PUT'    && $id !== null => $controller->update($id),
-                $requestMethod === 'DELETE' && $id !== null => $controller->destroy($id),
-                default => Response::error('Method not allowed', 405),
-            };
+            if ($requestMethod === 'GET' && $id === null)
+                $controller->index();
+            elseif ($requestMethod === 'GET' && $id !== null)
+                $controller->show($id);
+            elseif ($requestMethod === 'POST' && $id === null)
+                $controller->store();
+            elseif ($requestMethod === 'PUT' && $id !== null)
+                $controller->update($id);
+            elseif ($requestMethod === 'DELETE' && $id !== null)
+                $controller->destroy($id);
+            else
+                Response::error('Method not allowed', 405);
             break;
 
         case 'meetings':
             $controller = new MeetingController();
-            match (true) {
-                $requestMethod === 'GET'    && $id === null => $controller->index(),
-                $requestMethod === 'GET'    && $id !== null => $controller->show($id),
-                $requestMethod === 'POST'   && $id === null => $controller->store(),
-                $requestMethod === 'PUT'    && $id !== null => $controller->update($id),
-                $requestMethod === 'DELETE' && $id !== null => $controller->destroy($id),
-                default => Response::error('Method not allowed', 405),
-            };
+            if ($requestMethod === 'GET' && $id === null)
+                $controller->index();
+            elseif ($requestMethod === 'GET' && $id !== null)
+                $controller->show($id);
+            elseif ($requestMethod === 'POST' && $id === null)
+                $controller->store();
+            elseif ($requestMethod === 'PUT' && $id !== null)
+                $controller->update($id);
+            elseif ($requestMethod === 'DELETE' && $id !== null)
+                $controller->destroy($id);
+            else
+                Response::error('Method not allowed', 405);
             break;
 
         case 'tasks':
             $controller = new TaskController();
-            match (true) {
-                $requestMethod === 'GET'    && $id === null => $controller->index(),
-                $requestMethod === 'GET'    && $id !== null => $controller->show($id),
-                $requestMethod === 'POST'   && $id === null => $controller->store(),
-                $requestMethod === 'PUT'    && $id !== null => $controller->update($id),
-                $requestMethod === 'DELETE' && $id !== null => $controller->destroy($id),
-                default => Response::error('Method not allowed', 405),
-            };
+            if ($requestMethod === 'GET' && $id === null)
+                $controller->index();
+            elseif ($requestMethod === 'GET' && $id !== null)
+                $controller->show($id);
+            elseif ($requestMethod === 'POST' && $id === null)
+                $controller->store();
+            elseif ($requestMethod === 'PUT' && $id !== null)
+                $controller->update($id);
+            elseif ($requestMethod === 'DELETE' && $id !== null)
+                $controller->destroy($id);
+            else
+                Response::error('Method not allowed', 405);
             break;
 
         case 'users':
             $controller = new UserController();
-            match (true) {
-                $requestMethod === 'GET'    && $id === null => $controller->index(),
-                $requestMethod === 'GET'    && $id !== null => $controller->show($id),
-                $requestMethod === 'POST'   && $id === null => $controller->store(),
-                $requestMethod === 'PUT'    && $id !== null => $controller->update($id),
-                $requestMethod === 'DELETE' && $id !== null => $controller->destroy($id),
-                default => Response::error('Method not allowed', 405),
-            };
+            if ($requestMethod === 'GET' && $id === null)
+                $controller->index();
+            elseif ($requestMethod === 'GET' && $id !== null)
+                $controller->show($id);
+            elseif ($requestMethod === 'POST' && $id === null)
+                $controller->store();
+            elseif ($requestMethod === 'PUT' && $id !== null)
+                $controller->update($id);
+            elseif ($requestMethod === 'DELETE' && $id !== null)
+                $controller->destroy($id);
+            else
+                Response::error('Method not allowed', 405);
             break;
 
         default:
             Response::error('Route not found', 404);
     }
 } catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Internal server error',
-        'error'   => $e->getMessage(),
-    ]);
+    Response::error('Internal server error', 500);
 }
