@@ -18,7 +18,10 @@ class LeadController
     {
         Auth::requireAuth();
         $lead = Lead::findById($id);
-        if (!$lead) Response::notFound('Lead not found');
+        if (!$lead) {
+            Response::notFound('Lead not found');
+            return;
+        }
         Response::success($lead);
     }
 
@@ -27,8 +30,9 @@ class LeadController
         Auth::requireAuth();
         $data = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($data['first_name']) || empty($data['last_name'])) {
+        if (!is_array($data) || empty($data['first_name']) || empty($data['last_name'])) {
             Response::error('First name and last name are required', 400);
+            return;
         }
 
         $lead = Lead::create($data);
@@ -39,9 +43,17 @@ class LeadController
     {
         Auth::requireAuth();
         $lead = Lead::findById($id);
-        if (!$lead) Response::notFound('Lead not found');
+        if (!$lead) {
+            Response::notFound('Lead not found');
+            return;
+        }
 
-        $data    = json_decode(file_get_contents('php://input'), true);
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($data)) {
+            Response::error('Invalid JSON payload', 400);
+            return;
+        }
+
         $updated = Lead::update($id, $data);
         Response::success($updated, 'Lead updated');
     }
@@ -50,7 +62,10 @@ class LeadController
     {
         Auth::requireAuth();
         $lead = Lead::findById($id);
-        if (!$lead) Response::notFound('Lead not found');
+        if (!$lead) {
+            Response::notFound('Lead not found');
+            return;
+        }
 
         Lead::delete($id);
         Response::success(null, 'Lead deleted');
