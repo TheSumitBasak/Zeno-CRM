@@ -18,10 +18,7 @@ class TaskController
     {
         Auth::requireAuth();
         $task = Task::findById($id);
-        if (!$task) {
-            Response::notFound('Task not found');
-            return;
-        }
+        if (!$task) Response::notFound('Task not found');
         Response::success($task);
     }
 
@@ -30,9 +27,8 @@ class TaskController
         Auth::requireAuth();
         $data = json_decode(file_get_contents('php://input'), true);
 
-        if (!is_array($data) || empty($data['name'])) {
+        if (empty($data['name'])) {
             Response::error('Task name is required', 400);
-            return;
         }
 
         $task = Task::create($data);
@@ -43,17 +39,9 @@ class TaskController
     {
         Auth::requireAuth();
         $task = Task::findById($id);
-        if (!$task) {
-            Response::notFound('Task not found');
-            return;
-        }
+        if (!$task) Response::notFound('Task not found');
 
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($data)) {
-            Response::error('Invalid JSON payload', 400);
-            return;
-        }
-
+        $data    = json_decode(file_get_contents('php://input'), true);
         $updated = Task::update($id, $data);
         Response::success($updated, 'Task updated');
     }
@@ -62,10 +50,7 @@ class TaskController
     {
         Auth::requireAuth();
         $task = Task::findById($id);
-        if (!$task) {
-            Response::notFound('Task not found');
-            return;
-        }
+        if (!$task) Response::notFound('Task not found');
 
         Task::delete($id);
         Response::success(null, 'Task deleted');
