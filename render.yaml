@@ -12,7 +12,7 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: free
+    # plan: free
     healthCheckPath: /api/auth/login
     envVars:
       # Database — fill these in the Render dashboard after provisioning your
@@ -40,7 +40,7 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
-    plan: free
+    # plan: free
     envVars:
       # Set this to the backend service URL + /api, e.g.:
       # https://zeno-crm-backend.onrender.com/api
