@@ -6,15 +6,16 @@ USE zeno_crm;
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
-    id          INT AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(100) NOT NULL,
-    email       VARCHAR(150) NOT NULL UNIQUE,
-    password    VARCHAR(255) NOT NULL,
-    role        ENUM('admin', 'user') NOT NULL DEFAULT 'user',
-    team        VARCHAR(100),
-    is_active   TINYINT(1) NOT NULL DEFAULT 1,
-    last_login  DATETIME,
-    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    name             VARCHAR(100) NOT NULL,
+    email            VARCHAR(150) NOT NULL UNIQUE,
+    password         VARCHAR(255) NOT NULL,
+    role             ENUM('admin', 'user') NOT NULL DEFAULT 'user',
+    team             VARCHAR(100),
+    is_active        TINYINT(1) NOT NULL DEFAULT 1,
+    page_permissions JSON,
+    last_login       DATETIME,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_email (email),
     INDEX idx_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -60,19 +61,24 @@ CREATE TABLE IF NOT EXISTS contacts (
 
 -- Leads table
 CREATE TABLE IF NOT EXISTS leads (
-    id          INT AUTO_INCREMENT PRIMARY KEY,
-    first_name  VARCHAR(75) NOT NULL,
-    last_name   VARCHAR(75) NOT NULL,
-    email       VARCHAR(150),
-    phone       VARCHAR(50),
-    company     VARCHAR(150),
-    title       VARCHAR(100),
-    status      ENUM('new','in_process','assigned','recycled','converted','dead') NOT NULL DEFAULT 'new',
-    source      VARCHAR(100),
-    assigned_to INT,
-    description TEXT,
-    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    id                       INT AUTO_INCREMENT PRIMARY KEY,
+    first_name               VARCHAR(75) NOT NULL,
+    last_name                VARCHAR(75) NOT NULL,
+    email                    VARCHAR(150),
+    phone                    VARCHAR(50),
+    company                  VARCHAR(150),
+    title                    VARCHAR(100),
+    status                   ENUM('new','in_process','assigned','recycled','converted','dead') NOT NULL DEFAULT 'new',
+    source                   VARCHAR(100),
+    assigned_to              INT,
+    description              TEXT,
+    converted_contact_id     INT,
+    converted_account_id     INT,
+    converted_opportunity_id INT,
+    converted_support_id     INT,
+    converted_at             DATETIME,
+    created_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_status (status),
     INDEX idx_name (first_name, last_name),
     FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
@@ -84,6 +90,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
     name        VARCHAR(200) NOT NULL,
     account_id  INT,
     contact_id  INT,
+    lead_id     INT,
     stage       ENUM('prospecting','qualification','proposal','negotiation','closed_won','closed_lost') NOT NULL DEFAULT 'prospecting',
     amount      DECIMAL(15,2),
     probability TINYINT UNSIGNED DEFAULT 0,
@@ -97,7 +104,8 @@ CREATE TABLE IF NOT EXISTS opportunities (
     INDEX idx_close_date (close_date),
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
     FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
-    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Meetings table
@@ -112,11 +120,43 @@ CREATE TABLE IF NOT EXISTS meetings (
     duration_hours   TINYINT UNSIGNED DEFAULT 1,
     duration_minutes TINYINT UNSIGNED DEFAULT 0,
     description      TEXT,
+    meeting_link     VARCHAR(500),
     assigned_to      INT,
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_status (status),
     INDEX idx_start_date (start_date),
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Meeting Contacts (attendees) junction table
+CREATE TABLE IF NOT EXISTS meeting_contacts (
+    meeting_id INT NOT NULL,
+    contact_id INT NOT NULL,
+    PRIMARY KEY (meeting_id, contact_id),
+    FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Support Tickets table
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    subject     VARCHAR(200) NOT NULL,
+    status      ENUM('open','in_progress','pending','resolved','closed') NOT NULL DEFAULT 'open',
+    priority    ENUM('low','medium','high','urgent') NOT NULL DEFAULT 'medium',
+    lead_id     INT,
+    contact_id  INT,
+    account_id  INT,
+    assigned_to INT,
+    description TEXT,
+    resolution  TEXT,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_status (status),
+    INDEX idx_priority (priority),
+    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
     FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -128,6 +168,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     priority    ENUM('low','medium','high','urgent') NOT NULL DEFAULT 'medium',
     start_date  DATE,
     due_date    DATE,
+    parent_type VARCHAR(50),
+    parent_id   INT,
     contact_id  INT,
     assigned_to INT,
     description TEXT,
@@ -136,9 +178,228 @@ CREATE TABLE IF NOT EXISTS tasks (
     INDEX idx_status (status),
     INDEX idx_priority (priority),
     INDEX idx_due_date (due_date),
+    INDEX idx_parent (parent_type, parent_id),
     FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
     FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ================================================
+-- MIGRATIONS
+-- Run these when updating an existing database.
+-- Use information_schema checks so these are safe
+-- to re-run across MySQL variants that do not support
+-- ALTER TABLE ... IF NOT EXISTS.
+-- ================================================
+
+-- users: page_permissions column
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'users'
+              AND COLUMN_NAME = 'page_permissions'
+        ),
+        'SELECT 1',
+        'ALTER TABLE users ADD COLUMN page_permissions JSON AFTER is_active'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- leads: conversion tracking columns
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'leads'
+              AND COLUMN_NAME = 'converted_contact_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE leads ADD COLUMN converted_contact_id INT AFTER description'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'leads'
+              AND COLUMN_NAME = 'converted_account_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE leads ADD COLUMN converted_account_id INT AFTER converted_contact_id'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'leads'
+              AND COLUMN_NAME = 'converted_opportunity_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE leads ADD COLUMN converted_opportunity_id INT AFTER converted_account_id'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'leads'
+              AND COLUMN_NAME = 'converted_support_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE leads ADD COLUMN converted_support_id INT AFTER converted_opportunity_id'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'leads'
+              AND COLUMN_NAME = 'converted_at'
+        ),
+        'SELECT 1',
+        'ALTER TABLE leads ADD COLUMN converted_at DATETIME AFTER converted_support_id'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- opportunities: lead_id column + foreign key
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'opportunities'
+              AND COLUMN_NAME = 'lead_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE opportunities ADD COLUMN lead_id INT AFTER contact_id'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.TABLE_CONSTRAINTS
+            WHERE CONSTRAINT_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'opportunities'
+              AND CONSTRAINT_NAME = 'fk_opp_lead'
+              AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+        ),
+        'SELECT 1',
+        'ALTER TABLE opportunities ADD CONSTRAINT fk_opp_lead FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- meetings: meeting_link column
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'meetings'
+              AND COLUMN_NAME = 'meeting_link'
+        ),
+        'SELECT 1',
+        'ALTER TABLE meetings ADD COLUMN meeting_link VARCHAR(500) AFTER description'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- tasks: parent relationship columns + index
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'tasks'
+              AND COLUMN_NAME = 'parent_type'
+        ),
+        'SELECT 1',
+        'ALTER TABLE tasks ADD COLUMN parent_type VARCHAR(50) AFTER due_date'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'tasks'
+              AND COLUMN_NAME = 'parent_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE tasks ADD COLUMN parent_id INT AFTER parent_type'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS (
+            SELECT 1
+            FROM information_schema.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'tasks'
+              AND INDEX_NAME = 'idx_parent'
+        ),
+        'SELECT 1',
+        'ALTER TABLE tasks ADD INDEX idx_parent (parent_type, parent_id)'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ================================================
 -- SEED DATA
@@ -146,11 +407,11 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 -- Admin user (password: Admin@123)
 -- Hash generated with bcrypt for 'Admin@123' ($2y$ is PHP-compatible prefix)
-INSERT INTO users (name, email, password, role, team, is_active, created_at) VALUES
-('Admin User', 'admin@zenocrm.com', '$2y$12$1d/J8cxBt2mNovTTaSJljejImB/zQK7a6D74/b1mSRI7gcEzXA1Ge', 'admin', 'Management', 1, NOW()),
-('Sarah Connor', 'sarah.connor@zenocrm.com', '$2y$12$1d/J8cxBt2mNovTTaSJljejImB/zQK7a6D74/b1mSRI7gcEzXA1Ge', 'user', 'Sales', 1, NOW()),
-('Tom Brady', 'tom.brady@zenocrm.com', '$2y$12$1d/J8cxBt2mNovTTaSJljejImB/zQK7a6D74/b1mSRI7gcEzXA1Ge', 'user', 'Sales', 1, NOW()),
-('Lisa Simpson', 'lisa.simpson@zenocrm.com', '$2y$12$1d/J8cxBt2mNovTTaSJljejImB/zQK7a6D74/b1mSRI7gcEzXA1Ge', 'user', 'Support', 0, NOW());
+INSERT INTO users (name, email, password, role, team, is_active, page_permissions, created_at) VALUES
+('Admin User', 'admin@zenocrm.com', '$2y$12$1d/J8cxBt2mNovTTaSJljejImB/zQK7a6D74/b1mSRI7gcEzXA1Ge', 'admin', 'Management', 1, NULL, NOW()),
+('Sarah Connor', 'sarah.connor@zenocrm.com', '$2y$12$1d/J8cxBt2mNovTTaSJljejImB/zQK7a6D74/b1mSRI7gcEzXA1Ge', 'user', 'Sales', 1, '["accounts","contacts","leads","opportunities"]', NOW()),
+('Tom Brady', 'tom.brady@zenocrm.com', '$2y$12$1d/J8cxBt2mNovTTaSJljejImB/zQK7a6D74/b1mSRI7gcEzXA1Ge', 'user', 'Sales', 1, '["leads","opportunities","meetings","tasks"]', NOW()),
+('Lisa Simpson', 'lisa.simpson@zenocrm.com', '$2y$12$1d/J8cxBt2mNovTTaSJljejImB/zQK7a6D74/b1mSRI7gcEzXA1Ge', 'user', 'Support', 0, '["contacts","tasks"]', NOW());
 -- Note: PHP password_verify() accepts both $2y$ and $2b$ bcrypt prefixes
 
 -- Sample Accounts
@@ -159,7 +420,8 @@ INSERT INTO accounts (name, email, phone, industry, type, website, billing_addre
 ('Globex Industries', 'contact@globex.com', '+1-555-0200', 'Manufacturing', 'Partner', 'https://globex.com', '456 Oak Ave, Chicago, IL 60601', 1, '2024-01-20 10:00:00'),
 ('Initech Solutions', 'hello@initech.com', '+1-555-0300', 'Finance', 'Prospect', 'https://initech.com', '789 Pine Rd, Austin, TX 78701', 1, '2024-02-01 11:00:00'),
 ('Umbrella Corp', 'info@umbrella.com', '+1-555-0400', 'Healthcare', 'Customer', 'https://umbrella.com', '321 Elm St, Seattle, WA 98101', 1, '2024-02-10 09:30:00'),
-('Massive Dynamic', 'contact@massive.com', '+1-555-0500', 'Research', 'Prospect', 'https://massive.com', '654 Cedar Blvd, Boston, MA 02101', 1, '2024-02-15 14:00:00');
+('Massive Dynamic', 'contact@massive.com', '+1-555-0500', 'Research', 'Prospect', 'https://massive.com', '654 Cedar Blvd, Boston, MA 02101', 1, '2024-02-15 14:00:00'),
+('Michael Scott Paper', 'pam@michaelscott.com', '+1-555-0600', 'Retail', 'Customer', NULL, '100 Paper St, Scranton, PA 18501', 1, '2024-03-04 09:30:00');
 
 -- Sample Contacts
 INSERT INTO contacts (account_id, first_name, last_name, email, phone, title, department, created_at) VALUES
@@ -172,29 +434,30 @@ INSERT INTO contacts (account_id, first_name, last_name, email, phone, title, de
 (4, 'Edward', 'Norton', 'edward.n@umbrella.com', '+1-555-1007', 'President', 'Executive', '2024-02-11 09:00:00'),
 (4, 'Fiona', 'Green', 'fiona.g@umbrella.com', '+1-555-1008', 'Head of R&D', 'Research', '2024-02-12 10:00:00'),
 (5, 'George', 'Hall', 'george.h@massive.com', '+1-555-1009', 'Director', 'Science', '2024-02-16 11:30:00'),
-(5, 'Helen', 'Troy', 'helen.t@massive.com', '+1-555-1010', 'Analyst', 'Analytics', '2024-02-17 09:45:00');
+(5, 'Helen', 'Troy', 'helen.t@massive.com', '+1-555-1010', 'Analyst', 'Analytics', '2024-02-17 09:45:00'),
+(6, 'Pam', 'Beesly', 'p.beesly@michaelscott.com', '+1-555-2004', 'Sales Rep', 'Sales', '2024-03-04 09:30:00');
 
 -- Sample Leads
-INSERT INTO leads (first_name, last_name, email, phone, company, title, status, source, assigned_to, created_at) VALUES
-('Michael', 'Scott', 'm.scott@dunder.com', '+1-555-2001', 'Dunder Mifflin', 'Regional Manager', 'new', 'Web', 1, '2024-03-01 09:00:00'),
-('Dwight', 'Schrute', 'd.schrute@schrutefarm.com', '+1-555-2002', 'Schrute Farms', 'Owner', 'in_process', 'Referral', 1, '2024-03-02 10:00:00'),
-('Jim', 'Halpert', 'j.halpert@athleap.com', '+1-555-2003', 'Athleap', 'Co-Founder', 'assigned', 'Cold Call', 2, '2024-03-03 11:00:00'),
-('Pam', 'Beesly', 'p.beesly@michaelscott.com', '+1-555-2004', 'Michael Scott Paper', 'Sales Rep', 'converted', 'Email', 1, '2024-03-04 09:30:00'),
-('Ryan', 'Howard', 'r.howard@wuphf.com', '+1-555-2005', 'WUPHF', 'CEO', 'recycled', 'Social Media', 2, '2024-03-05 14:00:00'),
-('Angela', 'Martin', 'a.martin@accounting.com', '+1-555-2006', 'Martin Accounting', 'Manager', 'dead', 'Trade Show', 1, '2024-03-06 10:00:00'),
-('Kevin', 'Malone', 'k.malone@kevinschili.com', '+1-555-2007', "Kevin's Chili", 'Chef/Owner', 'new', 'Web', 3, '2024-03-07 11:30:00'),
-('Oscar', 'Martinez', 'o.martinez@finance.com', '+1-555-2008', 'Martinez Finance', 'Analyst', 'in_process', 'Referral', 1, '2024-03-08 09:00:00');
+INSERT INTO leads (first_name, last_name, email, phone, company, title, status, source, assigned_to, converted_contact_id, converted_account_id, converted_opportunity_id, converted_at, created_at) VALUES
+('Michael', 'Scott', 'm.scott@dunder.com', '+1-555-2001', 'Dunder Mifflin', 'Regional Manager', 'new', 'Web', 1, NULL, NULL, NULL, NULL, '2024-03-01 09:00:00'),
+('Dwight', 'Schrute', 'd.schrute@schrutefarm.com', '+1-555-2002', 'Schrute Farms', 'Owner', 'in_process', 'Referral', 1, NULL, NULL, NULL, NULL, '2024-03-02 10:00:00'),
+('Jim', 'Halpert', 'j.halpert@athleap.com', '+1-555-2003', 'Athleap', 'Co-Founder', 'assigned', 'Cold Call', 2, NULL, NULL, NULL, NULL, '2024-03-03 11:00:00'),
+('Pam', 'Beesly', 'p.beesly@michaelscott.com', '+1-555-2004', 'Michael Scott Paper', 'Sales Rep', 'converted', 'Email', 1, 11, 6, 1, '2024-03-04 09:30:00', '2024-03-04 09:30:00'),
+('Ryan', 'Howard', 'r.howard@wuphf.com', '+1-555-2005', 'WUPHF', 'CEO', 'recycled', 'Social Media', 2, NULL, NULL, NULL, NULL, '2024-03-05 14:00:00'),
+('Angela', 'Martin', 'a.martin@accounting.com', '+1-555-2006', 'Martin Accounting', 'Manager', 'dead', 'Trade Show', 1, NULL, NULL, NULL, NULL, '2024-03-06 10:00:00'),
+('Kevin', 'Malone', 'k.malone@kevinschili.com', '+1-555-2007', 'Kevin''s Chili', 'Chef/Owner', 'new', 'Web', 3, NULL, NULL, NULL, NULL, '2024-03-07 11:30:00'),
+('Oscar', 'Martinez', 'o.martinez@finance.com', '+1-555-2008', 'Martinez Finance', 'Analyst', 'in_process', 'Referral', 1, NULL, NULL, NULL, NULL, '2024-03-08 09:00:00');
 
 -- Sample Opportunities
-INSERT INTO opportunities (name, account_id, contact_id, stage, amount, probability, close_date, lead_source, assigned_to, created_at) VALUES
-('Acme Enterprise Deal', 1, 1, 'prospecting', 75000.00, 20, '2024-06-30', 'Web', 1, '2024-03-01 09:00:00'),
-('Globex Software License', 2, 3, 'qualification', 45000.00, 40, '2024-05-31', 'Referral', 2, '2024-03-05 10:00:00'),
-('Initech Cloud Migration', 3, 5, 'proposal', 120000.00, 60, '2024-07-15', 'Cold Call', 1, '2024-03-08 11:00:00'),
-('Umbrella Analytics Suite', 4, 7, 'negotiation', 95000.00, 80, '2024-04-30', 'Trade Show', 1, '2024-03-10 09:30:00'),
-('Massive Dynamic Research Platform', 5, 9, 'closed_won', 200000.00, 100, '2024-03-15', 'Referral', 1, '2024-02-20 14:00:00'),
-('Acme CRM Integration', 1, 2, 'qualification', 35000.00, 35, '2024-08-01', 'Email', 2, '2024-03-12 10:00:00'),
-('Globex HR System', 2, 4, 'prospecting', 55000.00, 15, '2024-09-30', 'Web', 3, '2024-03-15 11:00:00'),
-('Initech BI Dashboard', 3, 6, 'proposal', 68000.00, 55, '2024-06-15', 'Social Media', 1, '2024-03-18 09:00:00');
+INSERT INTO opportunities (name, account_id, contact_id, lead_id, stage, amount, probability, close_date, lead_source, assigned_to, created_at) VALUES
+('Acme Enterprise Deal', 1, 1, 4, 'prospecting', 75000.00, 20, '2024-06-30', 'Web', 1, '2024-03-01 09:00:00'),
+('Globex Software License', 2, 3, 3, 'qualification', 45000.00, 40, '2024-05-31', 'Referral', 2, '2024-03-05 10:00:00'),
+('Initech Cloud Migration', 3, 5, NULL, 'proposal', 120000.00, 60, '2024-07-15', 'Cold Call', 1, '2024-03-08 11:00:00'),
+('Umbrella Analytics Suite', 4, 7, NULL, 'negotiation', 95000.00, 80, '2024-04-30', 'Trade Show', 1, '2024-03-10 09:30:00'),
+('Massive Dynamic Research Platform', 5, 9, NULL, 'closed_won', 200000.00, 100, '2024-03-15', 'Referral', 1, '2024-02-20 14:00:00'),
+('Acme CRM Integration', 1, 2, NULL, 'qualification', 35000.00, 35, '2024-08-01', 'Email', 2, '2024-03-12 10:00:00'),
+('Globex HR System', 2, 4, NULL, 'prospecting', 55000.00, 15, '2024-09-30', 'Web', 3, '2024-03-15 11:00:00'),
+('Initech BI Dashboard', 3, 6, NULL, 'proposal', 68000.00, 55, '2024-06-15', 'Social Media', 1, '2024-03-18 09:00:00');
 
 -- Sample Meetings
 INSERT INTO meetings (name, parent_type, parent_id, status, start_date, end_date, duration_hours, duration_minutes, description, assigned_to, created_at) VALUES
@@ -204,10 +467,20 @@ INSERT INTO meetings (name, parent_type, parent_id, status, start_date, end_date
 ('Kickoff Meeting', 'Account', 5, 'held', '2024-03-16 11:00:00', '2024-03-16 12:00:00', 1, 0, 'Project kickoff for Massive Dynamic', 1, '2024-03-10 09:00:00'),
 ('Technical Assessment', 'Lead', 3, 'not_held', '2024-04-05 15:00:00', '2024-04-05 16:00:00', 1, 0, 'Technical requirements gathering session', 2, '2024-03-18 14:00:00');
 
+-- Meeting attendees (contact_ids per meeting)
+INSERT INTO meeting_contacts (meeting_id, contact_id) VALUES
+(1, 1),
+(1, 2),
+(2, 3),
+(3, 7),
+(4, 9);
+
 -- Sample Tasks
-INSERT INTO tasks (name, status, priority, start_date, due_date, contact_id, assigned_to, description, created_at) VALUES
-('Follow up with Acme CEO', 'not_started', 'high', '2024-04-01', '2024-04-05', 1, 1, 'Schedule follow-up call to discuss enterprise deal', '2024-03-25 09:00:00'),
-('Send proposal to Initech', 'in_progress', 'urgent', '2024-03-28', '2024-04-02', 5, 1, 'Prepare and send cloud migration proposal document', '2024-03-25 10:00:00'),
-('Update Globex contact info', 'completed', 'low', '2024-03-20', '2024-03-22', 3, 2, 'Update CRM records with latest contact information', '2024-03-18 11:00:00'),
-('Prepare quarterly report', 'in_progress', 'medium', '2024-03-25', '2024-04-10', NULL, 1, 'Compile Q1 sales data and performance metrics', '2024-03-22 09:30:00'),
-('Demo Massive Dynamic platform', 'not_started', 'high', '2024-04-08', '2024-04-12', 9, 1, 'Prepare demo environment for research platform', '2024-03-26 14:00:00');
+INSERT INTO tasks (name, status, priority, start_date, due_date, parent_type, parent_id, contact_id, assigned_to, description, created_at) VALUES
+('Follow up with Acme CEO', 'not_started', 'high', '2024-04-01', '2024-04-05', 'Opportunity', 1, 1, 1, 'Schedule follow-up call to discuss enterprise deal', '2024-03-25 09:00:00'),
+('Send proposal to Initech', 'in_progress', 'urgent', '2024-03-28', '2024-04-02', 'Opportunity', 3, 5, 1, 'Prepare and send cloud migration proposal document', '2024-03-25 10:00:00'),
+('Update Globex contact info', 'completed', 'low', '2024-03-20', '2024-03-22', 'Opportunity', 2, 3, 2, 'Update CRM records with latest contact information', '2024-03-18 11:00:00'),
+('Prepare quarterly report', 'in_progress', 'medium', '2024-03-25', '2024-04-10', NULL, NULL, NULL, 1, 'Compile Q1 sales data and performance metrics', '2024-03-22 09:30:00'),
+('Demo Massive Dynamic platform', 'not_started', 'high', '2024-04-08', '2024-04-12', 'Opportunity', 5, 9, 1, 'Prepare demo environment for research platform', '2024-03-26 14:00:00'),
+('Qualify Jim Halpert lead', 'not_started', 'medium', '2024-04-01', '2024-04-08', 'Lead', 3, NULL, 2, 'Assess qualification criteria for Athleap lead', '2024-03-26 09:00:00'),
+('Research Michael Scott company', 'in_progress', 'low', '2024-03-25', '2024-04-05', 'Lead', 1, NULL, 1, 'Background research on Dunder Mifflin', '2024-03-24 10:00:00');
