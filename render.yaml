@@ -1,0 +1,53 @@
+################################################################################
+# Zeno CRM — Render Blueprint
+# Deploy: https://dashboard.render.com/select-repo
+# Before deploying set the "sync: false" env vars manually in the Render dashboard.
+################################################################################
+
+services:
+
+  # ── Backend (PHP 8.2 + Apache via Docker) ────────────────────────────────
+  - type: web
+    name: zeno-crm-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/auth/login
+    envVars:
+      # Database — fill these in the Render dashboard after provisioning your
+      # external MySQL (see README: Aiven free tier recommended).
+      - key: DB_HOST
+        sync: false
+      - key: DB_NAME
+        value: zeno_crm
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      # Set this to the frontend service URL once it is deployed,
+      # e.g. https://zeno-crm-frontend.onrender.com
+      - key: FRONTEND_URL
+        sync: false
+      # Auto-generated strong secret for JWT signing
+      - key: JWT_SECRET
+        generateValue: true
+
+  # ── Frontend (Vue 3 / Vite → static site) ───────────────────────────────
+  - type: web
+    name: zeno-crm-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    plan: free
+    envVars:
+      # Set this to the backend service URL + /api, e.g.:
+      # https://zeno-crm-backend.onrender.com/api
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      # Rewrite all paths to index.html so Vue Router handles navigation
+      - type: rewrite
+        source: /*
+        destination: /index.html

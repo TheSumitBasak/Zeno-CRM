@@ -16,7 +16,7 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword" ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,6 +41,9 @@ services:
     command: >
       bash -c "
         docker-php-ext-install pdo pdo_mysql &&
+        apt-get update -qq && apt-get install -y -qq unzip git &&
+        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
+        cd /var/www/html && composer install --no-interaction --no-progress 2>/dev/null || true &&
         a2enmod rewrite headers &&
         echo 'ServerName localhost' >> /etc/apache2/apache2.conf &&
         sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf &&
