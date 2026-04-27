@@ -18,8 +18,7 @@ class UserController
     {
         Auth::requireAdmin();
         $user = User::findById($id);
-        if (!$user)
-            Response::notFound('User not found');
+        if (!$user) Response::notFound('User not found');
         Response::success($user);
     }
 
@@ -45,10 +44,9 @@ class UserController
     {
         Auth::requireAdmin();
         $user = User::findById($id);
-        if (!$user)
-            Response::notFound('User not found');
+        if (!$user) Response::notFound('User not found');
 
-        $data = json_decode(file_get_contents('php://input'), true);
+        $data    = json_decode(file_get_contents('php://input'), true);
         $updated = User::update($id, $data);
         Response::success($updated, 'User updated');
     }
@@ -57,8 +55,7 @@ class UserController
     {
         Auth::requireAdmin();
         $user = User::findById($id);
-        if (!$user)
-            Response::notFound('User not found');
+        if (!$user) Response::notFound('User not found');
 
         User::delete($id);
         Response::success(null, 'User deleted');

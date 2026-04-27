@@ -18,10 +18,7 @@ class LeadController
     {
         Auth::requireAuth();
         $lead = Lead::findById($id);
-        if (!$lead) {
-            Response::notFound('Lead not found');
-            return;
-        }
+        if (!$lead) Response::notFound('Lead not found');
         Response::success($lead);
     }
 
@@ -30,9 +27,8 @@ class LeadController
         Auth::requireAuth();
         $data = json_decode(file_get_contents('php://input'), true);
 
-        if (!is_array($data) || empty($data['first_name']) || empty($data['last_name'])) {
+        if (empty($data['first_name']) || empty($data['last_name'])) {
             Response::error('First name and last name are required', 400);
-            return;
         }
 
         $lead = Lead::create($data);
@@ -43,17 +39,9 @@ class LeadController
     {
         Auth::requireAuth();
         $lead = Lead::findById($id);
-        if (!$lead) {
-            Response::notFound('Lead not found');
-            return;
-        }
+        if (!$lead) Response::notFound('Lead not found');
 
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($data)) {
-            Response::error('Invalid JSON payload', 400);
-            return;
-        }
-
+        $data    = json_decode(file_get_contents('php://input'), true);
         $updated = Lead::update($id, $data);
         Response::success($updated, 'Lead updated');
     }
@@ -62,12 +50,30 @@ class LeadController
     {
         Auth::requireAuth();
         $lead = Lead::findById($id);
-        if (!$lead) {
-            Response::notFound('Lead not found');
-            return;
-        }
+        if (!$lead) Response::notFound('Lead not found');
 
         Lead::delete($id);
         Response::success(null, 'Lead deleted');
+    }
+
+    public function convert(int $id): void
+    {
+        Auth::requireAuth();
+        $lead = Lead::findById($id);
+        if (!$lead) Response::notFound('Lead not found');
+        if ($lead['status'] === 'converted') Response::error('Lead already converted', 400);
+        $data   = json_decode(file_get_contents('php://input'), true) ?? [];
+        $result = Lead::convert($id, $data);
+        Response::success($result, 'Lead converted successfully');
+    }
+
+    public function promoteSupport(int $id): void
+    {
+        Auth::requireAuth();
+        $lead = Lead::findById($id);
+        if (!$lead) Response::notFound('Lead not found');
+        $data   = json_decode(file_get_contents('php://input'), true) ?? [];
+        $result = Lead::promoteSupport($id, $data);
+        Response::success($result, 'Lead promoted to support ticket');
     }
 }

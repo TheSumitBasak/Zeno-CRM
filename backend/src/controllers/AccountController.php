@@ -18,8 +18,7 @@ class AccountController
     {
         Auth::requireAuth();
         $account = Account::findById($id);
-        if (!$account)
-            Response::notFound('Account not found');
+        if (!$account) Response::notFound('Account not found');
         Response::success($account);
     }
 
@@ -41,10 +40,9 @@ class AccountController
     {
         Auth::requireAuth();
         $account = Account::findById($id);
-        if (!$account)
-            Response::notFound('Account not found');
+        if (!$account) Response::notFound('Account not found');
 
-        $data = json_decode(file_get_contents('php://input'), true);
+        $data    = json_decode(file_get_contents('php://input'), true);
         $updated = Account::update($id, $data);
         Response::success($updated, 'Account updated');
     }
@@ -53,8 +51,7 @@ class AccountController
     {
         Auth::requireAuth();
         $account = Account::findById($id);
-        if (!$account)
-            Response::notFound('Account not found');
+        if (!$account) Response::notFound('Account not found');
 
         Account::delete($id);
         Response::success(null, 'Account deleted');

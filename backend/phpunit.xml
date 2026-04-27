@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.0/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         stopOnFailure="false">
+    <testsuites>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <!--
+        These are HTTP integration tests that require the backend server to be running.
+        Set TEST_BASE_URL to match your local dev server, e.g.:
+            TEST_BASE_URL=http://localhost:8080 vendor/bin/phpunit
+        or override via the env block below.
+    -->
+    <php>
+        <env name="TEST_BASE_URL" value="http://localhost:8080"/>
+    </php>
+</phpunit>

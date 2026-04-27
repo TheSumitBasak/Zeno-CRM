@@ -18,10 +18,7 @@ class MeetingController
     {
         Auth::requireAuth();
         $meeting = Meeting::findById($id);
-        if (!$meeting) {
-            Response::notFound('Meeting not found');
-            return;
-        }
+        if (!$meeting) Response::notFound('Meeting not found');
         Response::success($meeting);
     }
 
@@ -30,9 +27,8 @@ class MeetingController
         Auth::requireAuth();
         $data = json_decode(file_get_contents('php://input'), true);
 
-        if (!is_array($data) || empty($data['name'])) {
+        if (empty($data['name'])) {
             Response::error('Meeting name is required', 400);
-            return;
         }
 
         $meeting = Meeting::create($data);
@@ -43,17 +39,9 @@ class MeetingController
     {
         Auth::requireAuth();
         $meeting = Meeting::findById($id);
-        if (!$meeting) {
-            Response::notFound('Meeting not found');
-            return;
-        }
+        if (!$meeting) Response::notFound('Meeting not found');
 
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($data)) {
-            Response::error('Invalid JSON payload', 400);
-            return;
-        }
-
+        $data    = json_decode(file_get_contents('php://input'), true);
         $updated = Meeting::update($id, $data);
         Response::success($updated, 'Meeting updated');
     }
@@ -62,10 +50,7 @@ class MeetingController
     {
         Auth::requireAuth();
         $meeting = Meeting::findById($id);
-        if (!$meeting) {
-            Response::notFound('Meeting not found');
-            return;
-        }
+        if (!$meeting) Response::notFound('Meeting not found');
 
         Meeting::delete($id);
         Response::success(null, 'Meeting deleted');

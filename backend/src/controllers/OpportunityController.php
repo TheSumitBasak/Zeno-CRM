@@ -18,10 +18,7 @@ class OpportunityController
     {
         Auth::requireAuth();
         $opp = Opportunity::findById($id);
-        if (!$opp) {
-            Response::notFound('Opportunity not found');
-            return;
-        }
+        if (!$opp) Response::notFound('Opportunity not found');
         Response::success($opp);
     }
 
@@ -30,9 +27,8 @@ class OpportunityController
         Auth::requireAuth();
         $data = json_decode(file_get_contents('php://input'), true);
 
-        if (!is_array($data) || empty($data['name'])) {
+        if (empty($data['name'])) {
             Response::error('Opportunity name is required', 400);
-            return;
         }
 
         $opp = Opportunity::create($data);
@@ -43,17 +39,9 @@ class OpportunityController
     {
         Auth::requireAuth();
         $opp = Opportunity::findById($id);
-        if (!$opp) {
-            Response::notFound('Opportunity not found');
-            return;
-        }
+        if (!$opp) Response::notFound('Opportunity not found');
 
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($data)) {
-            Response::error('Invalid JSON payload', 400);
-            return;
-        }
-
+        $data    = json_decode(file_get_contents('php://input'), true);
         $updated = Opportunity::update($id, $data);
         Response::success($updated, 'Opportunity updated');
     }
@@ -62,10 +50,7 @@ class OpportunityController
     {
         Auth::requireAuth();
         $opp = Opportunity::findById($id);
-        if (!$opp) {
-            Response::notFound('Opportunity not found');
-            return;
-        }
+        if (!$opp) Response::notFound('Opportunity not found');
 
         Opportunity::delete($id);
         Response::success(null, 'Opportunity deleted');

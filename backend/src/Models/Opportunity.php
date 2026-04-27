@@ -37,13 +37,14 @@ class Opportunity
     {
         $pdo  = Database::getInstance();
         $stmt = $pdo->prepare("
-            INSERT INTO opportunities (name, account_id, contact_id, stage, amount, probability, close_date, lead_source, description, assigned_to, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            INSERT INTO opportunities (name, account_id, contact_id, lead_id, stage, amount, probability, close_date, lead_source, description, assigned_to, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         ");
         $stmt->execute([
             $data['name'],
             $data['account_id'] ?: null,
             $data['contact_id'] ?: null,
+            $data['lead_id'] ?: null,
             $data['stage'] ?? 'prospecting',
             $data['amount'] ?: null,
             $data['probability'] ?? 0,
@@ -58,7 +59,7 @@ class Opportunity
     public static function update(int $id, array $data): ?array
     {
         $pdo     = Database::getInstance();
-        $allowed = ['name', 'account_id', 'contact_id', 'stage', 'amount', 'probability', 'close_date', 'lead_source', 'description', 'assigned_to'];
+        $allowed = ['name', 'account_id', 'contact_id', 'lead_id', 'stage', 'amount', 'probability', 'close_date', 'lead_source', 'description', 'assigned_to'];
         $fields  = [];
         $values  = [];
         foreach ($allowed as $field) {

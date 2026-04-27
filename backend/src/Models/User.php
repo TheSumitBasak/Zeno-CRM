@@ -7,19 +7,30 @@ use PDO;
 
 class User
 {
+    private static function decodePermissions(array $row): array
+    {
+        if (isset($row['page_permissions']) && is_string($row['page_permissions'])) {
+            $row['page_permissions'] = json_decode($row['page_permissions'], true) ?? [];
+        } elseif (!isset($row['page_permissions'])) {
+            $row['page_permissions'] = [];
+        }
+        return $row;
+    }
+
     public static function findAll(): array
     {
-        $pdo = Database::getInstance();
-        $stmt = $pdo->query("SELECT id, name, email, role, team, is_active, last_login, created_at FROM users ORDER BY created_at DESC");
-        return $stmt->fetchAll();
+        $pdo  = Database::getInstance();
+        $stmt = $pdo->query("SELECT id, name, email, role, team, is_active, page_permissions, last_login, created_at FROM users ORDER BY created_at DESC");
+        return array_map([self::class, 'decodePermissions'], $stmt->fetchAll());
     }
 
     public static function findById(int $id): ?array
     {
         $pdo  = Database::getInstance();
-        $stmt = $pdo->prepare("SELECT id, name, email, role, team, is_active, last_login, created_at FROM users WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, name, email, role, team, is_active, page_permissions, last_login, created_at FROM users WHERE id = ?");
         $stmt->execute([$id]);
-        return $stmt->fetch() ?: null;
+        $row  = $stmt->fetch();
+        return $row ? self::decodePermissions($row) : null;
     }
 
     public static function findByEmail(string $email): ?array
@@ -27,15 +38,17 @@ class User
         $pdo  = Database::getInstance();
         $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
         $stmt->execute([$email]);
-        return $stmt->fetch() ?: null;
+        $row  = $stmt->fetch();
+        return $row ? self::decodePermissions($row) : null;
     }
 
     public static function create(array $data): ?array
     {
-        $pdo  = Database::getInstance();
-        $stmt = $pdo->prepare("
-            INSERT INTO users (name, email, password, role, team, is_active, created_at)
-            VALUES (?, ?, ?, ?, ?, 1, NOW())
+        $pdo         = Database::getInstance();
+        $permissions = isset($data['page_permissions']) ? json_encode($data['page_permissions']) : null;
+        $stmt        = $pdo->prepare("
+            INSERT INTO users (name, email, password, role, team, is_active, page_permissions, created_at)
+            VALUES (?, ?, ?, ?, ?, 1, ?, NOW())
         ");
         $stmt->execute([
             $data['name'],
@@ -43,6 +56,7 @@ class User
             password_hash($data['password'], PASSWORD_BCRYPT),
             $data['role'] ?? 'user',
             $data['team'] ?? null,
+            $permissions,
         ]);
         return self::findById((int)$pdo->lastInsertId());
     }
@@ -59,6 +73,11 @@ class User
                 $fields[] = "{$field} = ?";
                 $values[] = $data[$field];
             }
+        }
+
+        if (array_key_exists('page_permissions', $data)) {
+            $fields[] = "page_permissions = ?";
+            $values[] = is_array($data['page_permissions']) ? json_encode($data['page_permissions']) : null;
         }
 
         if (!empty($data['password'])) {

@@ -29,22 +29,23 @@ class AuthController
         User::updateLastLogin($user['id']);
 
         $payload = [
-            'id' => $user['id'],
+            'id'    => $user['id'],
             'email' => $user['email'],
-            'role' => $user['role'],
-            'name' => $user['name'],
+            'role'  => $user['role'],
+            'name'  => $user['name'],
         ];
 
         $token = Auth::generateToken($payload);
 
         Response::success([
             'token' => $token,
-            'user' => [
-                'id' => $user['id'],
-                'name' => $user['name'],
-                'email' => $user['email'],
-                'role' => $user['role'],
-                'team' => $user['team'],
+            'user'  => [
+                'id'               => $user['id'],
+                'name'             => $user['name'],
+                'email'            => $user['email'],
+                'role'             => $user['role'],
+                'team'             => $user['team'],
+                'page_permissions' => $user['page_permissions'] ?? [],
             ],
         ], 'Login successful');
     }

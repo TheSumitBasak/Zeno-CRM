@@ -12,10 +12,10 @@ class Database
     public static function getInstance(): PDO
     {
         if (self::$instance === null) {
-            $host = '127.0.0.1';
-            $name = 'zeno_crm';
-            $user = 'zeno_user';
-            $pass = 'zeno_pass';
+            $host = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? '127.0.0.1';
+            $name = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'zeno_crm';
+            $user = $_ENV['DB_USER'] ?? getenv('DB_USER') ?? 'zeno_user';
+            $pass = $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?? 'zeno_pass';
 
             try {
                 $dsn = "mysql:host={$host};dbname={$name};charset=utf8mb4";

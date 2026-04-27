@@ -33,8 +33,8 @@ class Task
     {
         $pdo  = Database::getInstance();
         $stmt = $pdo->prepare("
-            INSERT INTO tasks (name, status, priority, start_date, due_date, contact_id, assigned_to, description, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            INSERT INTO tasks (name, status, priority, start_date, due_date, parent_type, parent_id, contact_id, assigned_to, description, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         ");
         $stmt->execute([
             $data['name'],
@@ -42,6 +42,8 @@ class Task
             $data['priority'] ?? 'medium',
             $data['start_date'] ?: null,
             $data['due_date'] ?: null,
+            $data['parent_type'] ?: null,
+            $data['parent_id'] ?: null,
             $data['contact_id'] ?: null,
             $data['assigned_to'] ?: null,
             $data['description'] ?? null,
@@ -52,7 +54,7 @@ class Task
     public static function update(int $id, array $data): ?array
     {
         $pdo     = Database::getInstance();
-        $allowed = ['name', 'status', 'priority', 'start_date', 'due_date', 'contact_id', 'assigned_to', 'description'];
+        $allowed = ['name', 'status', 'priority', 'start_date', 'due_date', 'parent_type', 'parent_id', 'contact_id', 'assigned_to', 'description'];
         $fields  = [];
         $values  = [];
         foreach ($allowed as $field) {
