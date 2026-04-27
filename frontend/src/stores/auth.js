@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import axios from 'axios'
+import { useToastStore } from './toast'
+
+const AUTH_ENDPOINT = (import.meta.env.VITE_API_URL || '/api') + '/auth/login'
 
 export const useAuthStore = defineStore('auth', () => {
   const storedToken = localStorage.getItem('zeno_token');
@@ -30,12 +33,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(email, password) {
     try {
-      const response = await axios.post('/api/auth/login', { email, password })
+      const response = await axios.post(AUTH_ENDPOINT, { email, password })
       const data = response.data.data || response.data
       token.value = data.token
       user.value = data.user
       localStorage.setItem('zeno_token', data.token)
       localStorage.setItem('zeno_user', JSON.stringify(data.user))
+      useToastStore().success(`Welcome back, ${data.user.name}!`)
       return { success: true }
     } catch (error) {
       // Fallback to mock authentication
@@ -45,6 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = MOCK_USER
         localStorage.setItem('zeno_token', mockToken)
         localStorage.setItem('zeno_user', JSON.stringify(MOCK_USER))
+        useToastStore().success(`Welcome back, ${MOCK_USER.name}!`)
         return { success: true }
       }
       return { success: false, message: 'Invalid email or password' }

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '../composables/useApi'
+import { useToastStore } from './toast'
 
 const ALL_PAGES = ['accounts', 'contacts', 'leads', 'opportunities', 'meetings', 'tasks']
 
@@ -32,6 +33,7 @@ export const useUsersStore = defineStore('users', () => {
     try {
       const response = await api.post('/users', data)
       items.value.unshift(response.data.data || response.data)
+      useToastStore().success('User created successfully')
     } catch {
       const newItem = { ...data, id: Date.now(), created_at: new Date().toISOString().split('T')[0], is_active: true }
       items.value.unshift(newItem)
@@ -43,6 +45,7 @@ export const useUsersStore = defineStore('users', () => {
       const response = await api.put(`/users/${id}`, data)
       const idx = items.value.findIndex(i => i.id === id)
       if (idx !== -1) items.value[idx] = response.data.data || response.data
+      useToastStore().success('User updated successfully')
     } catch {
       const idx = items.value.findIndex(i => i.id === id)
       if (idx !== -1) items.value[idx] = { ...items.value[idx], ...data }
@@ -52,6 +55,7 @@ export const useUsersStore = defineStore('users', () => {
   async function remove(id) {
     try {
       await api.delete(`/users/${id}`)
+      useToastStore().success('User deleted')
     } catch {}
     items.value = items.value.filter(i => i.id !== id)
   }

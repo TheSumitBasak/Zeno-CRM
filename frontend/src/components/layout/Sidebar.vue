@@ -70,6 +70,7 @@ import {
   CurrencyDollarIcon,
   CalendarIcon,
   ClipboardDocumentListIcon,
+  LifebuoyIcon,
   ShieldCheckIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/vue/24/outline'
@@ -85,18 +86,28 @@ const userInitials = computed(() => {
 
 const allNavItems = [
   { path: '/dashboard', label: 'Dashboard', icon: HomeIcon },
-  { path: '/accounts', label: 'Accounts', icon: BuildingOfficeIcon },
-  { path: '/contacts', label: 'Contacts', icon: UsersIcon },
-  { path: '/leads', label: 'Leads', icon: UserPlusIcon },
-  { path: '/opportunities', label: 'Opportunities', icon: CurrencyDollarIcon },
-  { path: '/meetings', label: 'Meetings', icon: CalendarIcon },
-  { path: '/tasks', label: 'Tasks', icon: ClipboardDocumentListIcon },
+  { path: '/accounts', label: 'Accounts', icon: BuildingOfficeIcon, pageKey: 'accounts' },
+  { path: '/contacts', label: 'Contacts', icon: UsersIcon, pageKey: 'contacts' },
+  { path: '/leads', label: 'Leads', icon: UserPlusIcon, pageKey: 'leads' },
+  { path: '/opportunities', label: 'Opportunities', icon: CurrencyDollarIcon, pageKey: 'opportunities' },
+  { path: '/meetings', label: 'Meetings', icon: CalendarIcon, pageKey: 'meetings' },
+  { path: '/tasks', label: 'Tasks', icon: ClipboardDocumentListIcon, pageKey: 'tasks' },
+  { path: '/support', label: 'Support', icon: LifebuoyIcon, pageKey: 'support' },
   { path: '/users', label: 'User Management', icon: ShieldCheckIcon, adminOnly: true },
 ]
 
-const navItems = computed(() =>
-  allNavItems.filter(item => !item.adminOnly || authStore.user?.role === 'admin')
-)
+const navItems = computed(() => {
+  const isAdmin = authStore.user?.role === 'admin'
+  const permissions = authStore.user?.page_permissions
+
+  return allNavItems.filter(item => {
+    if (item.adminOnly) return isAdmin
+    if (!item.pageKey) return true // dashboard always visible
+    if (isAdmin) return true
+    if (!permissions || permissions.length === 0) return true // no restrictions set
+    return permissions.includes(item.pageKey)
+  })
+})
 
 function isActive(path) {
   return route.path === path || route.path.startsWith(path + '/')

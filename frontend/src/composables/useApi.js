@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
+import { useToastStore } from '../stores/toast'
 import router from '../router'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -24,6 +25,12 @@ api.interceptors.response.use(
       const authStore = useAuthStore()
       authStore.logout()
       router.push('/login')
+    } else if (error.response) {
+      const toastStore = useToastStore()
+      const message = error.response.data?.message
+        || error.response.data?.error
+        || `Server error (${error.response.status})`
+      toastStore.error(message)
     }
     return Promise.reject(error)
   }

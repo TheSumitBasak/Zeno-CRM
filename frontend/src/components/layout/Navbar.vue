@@ -37,8 +37,8 @@
       <!-- User avatar -->
       <div class="dropdown dropdown-end">
         <label tabindex="0" class="btn btn-ghost btn-sm btn-circle avatar placeholder cursor-pointer">
-          <div class="w-8 rounded-full bg-primary">
-            <span class="text-xs text-primary-content font-bold">{{ userInitials }}</span>
+          <div class="w-8 rounded-full bg-secondary">
+            <span class="text-xs text-secondary-content font-bold">{{ userInitials }}</span>
           </div>
         </label>
         <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-xl w-52 border border-base-300 mt-1 z-50">

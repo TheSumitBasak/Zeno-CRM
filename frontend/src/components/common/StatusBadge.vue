@@ -61,6 +61,14 @@ const activeMap = {
   false: { class: 'badge-error', label: 'Inactive' },
 }
 
+const supportStatusMap = {
+  open: { class: 'badge-info', label: 'Open' },
+  in_progress: { class: 'badge-warning', label: 'In Progress' },
+  pending: { class: 'badge-ghost', label: 'Pending' },
+  resolved: { class: 'badge-success', label: 'Resolved' },
+  closed: { class: 'badge-error', label: 'Closed' },
+}
+
 const maps = {
   lead: leadStatusMap,
   opportunity: opportunityStageMap,
@@ -69,6 +77,7 @@ const maps = {
   priority: taskPriorityMap,
   role: userRoleMap,
   active: activeMap,
+  support: supportStatusMap,
 }
 
 const currentMap = computed(() => maps[props.type] || leadStatusMap)

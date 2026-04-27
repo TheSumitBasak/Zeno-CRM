@@ -1,48 +1,51 @@
 <template>
   <div class="min-h-screen flex">
     <!-- Left Branding Panel -->
-    <div class="hidden lg:flex lg:w-1/2 bg-primary text-primary-content flex-col justify-between p-12">
+    <div class="relative hidden lg:flex lg:w-1/2 text-white flex-col items-center justify-around p-12 overflow-hidden">
       <!-- Logo -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-primary-content/10 border border-primary-content/20 flex items-center justify-center">
-          <span class="text-primary-content font-bold text-xl">Z</span>
+      <div class="absolute inset-0 nav-design-container bg-base-200 -z-10"></div>
+      <div class="flex-grow-1 h-full bg-white/10 rounded-lg border border-white p-3 flex flex-col justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-primary-content/10 border border-primary-content/20 flex items-center justify-center">
+            <span class=" font-bold text-xl">Z</span>
+          </div>
+          <span class=" text-xl font-bold">Zeno CRM</span>
         </div>
-        <span class="text-primary-content text-xl font-bold">Zeno CRM</span>
-      </div>
 
-      <!-- Center Content -->
-      <div>
-        <div class="inline-flex items-center gap-2 bg-primary-content/10 rounded-full px-4 py-2 mb-6">
-          <div class="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-          <span class="text-primary-content/80 text-sm">Trusted by 1,000+ businesses</span>
-        </div>
-        <h1 class="text-4xl font-bold text-primary-content mb-4 leading-tight">
-          Manage your<br />
-          <span class="text-primary-content opacity-80">
-            customer relationships
-          </span><br />
-          with confidence.
-        </h1>
-        <p class="text-primary-content/60 text-lg leading-relaxed">
-          Track leads, manage deals, and grow your business with the most intuitive CRM platform.
-        </p>
+        <!-- Center Content -->
+        <div>
+          <div class="inline-flex items-center gap-2 bg-primary-content/10 rounded-full px-4 py-2 mb-6">
+            <div class="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+            <span class="/80 text-sm">Trusted by 1,000+ businesses</span>
+          </div>
+          <h1 class="text-4xl font-bold  mb-4 leading-tight">
+            Manage your<br />
+            <span class=" opacity-80">
+              customer relationships
+            </span><br />
+            with confidence.
+          </h1>
+          <p class="/60 text-lg leading-relaxed">
+            Track leads, manage deals, and grow your business with the most intuitive CRM platform.
+          </p>
 
-        <!-- Feature bullets -->
-        <div class="mt-8 space-y-3">
-          <div v-for="feature in features" :key="feature" class="flex items-center gap-3">
-            <div class="w-5 h-5 rounded-full bg-success/20 border border-success/30 flex items-center justify-center flex-shrink-0">
-              <CheckIcon class="w-3 h-3 text-success" />
+          <!-- Feature bullets -->
+          <div class="mt-8 space-y-3">
+            <div v-for="feature in features" :key="feature" class="flex items-center gap-3">
+              <div class="w-5 h-5 rounded-full bg-success/20 border border-success/30 flex items-center justify-center flex-shrink-0">
+                <CheckIcon class="w-3 h-3 text-success" />
+              </div>
+              <span class="/70 text-sm">{{ feature }}</span>
             </div>
-            <span class="text-primary-content/70 text-sm">{{ feature }}</span>
           </div>
         </div>
-      </div>
 
-      <!-- Bottom Stats -->
-      <div class="flex gap-8">
-        <div v-for="stat in stats" :key="stat.label">
-          <p class="text-2xl font-bold text-primary-content">{{ stat.value }}</p>
-          <p class="text-primary-content/50 text-xs">{{ stat.label }}</p>
+        <!-- Bottom Stats -->
+        <div class="flex gap-8">
+          <div v-for="stat in stats" :key="stat.label">
+            <p class="text-2xl font-bold ">{{ stat.value }}</p>
+            <p class="/50 text-xs">{{ stat.label }}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -141,7 +144,7 @@
           </form>
 
           <!-- Demo credentials -->
-          <div class="mt-6 p-4 bg-info/10 rounded-xl border border-info/20">
+          <!-- <div class="mt-6 p-4 bg-info/10 rounded-xl border border-info/20">
             <p class="text-xs font-semibold text-info mb-2">Demo Credentials</p>
             <div class="space-y-1">
               <p class="text-xs text-info">Email: <span class="font-mono font-medium">admin@zenocrm.com</span></p>
@@ -153,7 +156,7 @@
             >
               Fill Demo
             </button>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>

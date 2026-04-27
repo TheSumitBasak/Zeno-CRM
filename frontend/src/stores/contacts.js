@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '../composables/useApi'
+import { useToastStore } from './toast'
 
 const MOCK_CONTACTS = [
   { id: 1, account_id: 1, first_name: 'John', last_name: 'Smith', email: 'john.smith@acme.com', phone: '+1-555-1001', title: 'CEO', department: 'Executive', created_at: '2024-01-15' },
@@ -36,6 +37,7 @@ export const useContactsStore = defineStore('contacts', () => {
     try {
       const response = await api.post('/contacts', data)
       items.value.unshift(response.data.data || response.data)
+      useToastStore().success('Contact created successfully')
     } catch {
       const newItem = { ...data, id: Date.now(), created_at: new Date().toISOString().split('T')[0] }
       items.value.unshift(newItem)
@@ -47,6 +49,7 @@ export const useContactsStore = defineStore('contacts', () => {
       const response = await api.put(`/contacts/${id}`, data)
       const idx = items.value.findIndex(i => i.id === id)
       if (idx !== -1) items.value[idx] = response.data.data || response.data
+      useToastStore().success('Contact updated successfully')
     } catch {
       const idx = items.value.findIndex(i => i.id === id)
       if (idx !== -1) items.value[idx] = { ...items.value[idx], ...data }
@@ -56,6 +59,7 @@ export const useContactsStore = defineStore('contacts', () => {
   async function remove(id) {
     try {
       await api.delete(`/contacts/${id}`)
+      useToastStore().success('Contact deleted')
     } catch {}
     items.value = items.value.filter(i => i.id !== id)
   }

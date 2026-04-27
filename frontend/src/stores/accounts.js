@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '../composables/useApi'
+import { useToastStore } from './toast'
 
 const MOCK_ACCOUNTS = [
   { id: 1, name: 'Acme Corporation', email: 'info@acme.com', phone: '+1-555-0100', industry: 'Technology', type: 'Customer', website: 'https://acme.com', billing_address: '123 Main St, New York, NY', created_at: '2024-01-15' },
@@ -31,6 +32,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     try {
       const response = await api.post('/accounts', data)
       items.value.unshift(response.data.data || response.data)
+      useToastStore().success('Account created successfully')
     } catch {
       const newItem = { ...data, id: Date.now(), created_at: new Date().toISOString().split('T')[0] }
       items.value.unshift(newItem)
@@ -42,6 +44,7 @@ export const useAccountsStore = defineStore('accounts', () => {
       const response = await api.put(`/accounts/${id}`, data)
       const idx = items.value.findIndex(i => i.id === id)
       if (idx !== -1) items.value[idx] = response.data.data || response.data
+      useToastStore().success('Account updated successfully')
     } catch {
       const idx = items.value.findIndex(i => i.id === id)
       if (idx !== -1) items.value[idx] = { ...items.value[idx], ...data }
@@ -51,6 +54,7 @@ export const useAccountsStore = defineStore('accounts', () => {
   async function remove(id) {
     try {
       await api.delete(`/accounts/${id}`)
+      useToastStore().success('Account deleted')
     } catch {}
     items.value = items.value.filter(i => i.id !== id)
   }

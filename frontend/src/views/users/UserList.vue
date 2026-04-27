@@ -63,6 +63,21 @@
             <label class="label"><span class="label-text text-sm font-medium">Team</span></label>
             <input v-model="form.team" type="text" class="input input-bordered input-sm" placeholder="e.g. Sales, Support" />
           </div>
+          <div class="form-control" v-if="form.role === 'user'">
+            <label class="label"><span class="label-text text-sm font-medium">Page Access</span></label>
+            <div class="grid grid-cols-2 gap-2 p-3 bg-base-200 rounded-lg">
+              <label v-for="page in availablePages" :key="page.key" class="cursor-pointer flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm"
+                  :value="page.key"
+                  :checked="form.page_permissions.includes(page.key)"
+                  @change="togglePage(page.key)"
+                />
+                <span class="label-text text-sm">{{ page.label }}</span>
+              </label>
+            </div>
+          </div>
           <div class="form-control" v-if="editingItem">
             <label class="cursor-pointer flex items-center gap-3">
               <input v-model="form.is_active" type="checkbox" class="toggle toggle-primary toggle-sm" />
@@ -113,8 +128,23 @@ const editingItem = ref(null)
 const deletingItem = ref(null)
 const submitting = ref(false)
 
-const defaultForm = { name: '', email: '', password: '', role: 'user', team: '', is_active: true }
+const availablePages = [
+  { key: 'accounts', label: 'Accounts' },
+  { key: 'contacts', label: 'Contacts' },
+  { key: 'leads', label: 'Leads' },
+  { key: 'opportunities', label: 'Opportunities' },
+  { key: 'meetings', label: 'Meetings' },
+  { key: 'tasks', label: 'Tasks' },
+]
+
+const defaultForm = { name: '', email: '', password: '', role: 'user', team: '', is_active: true, page_permissions: [] }
 const form = reactive({ ...defaultForm })
+
+function togglePage(key) {
+  const idx = form.page_permissions.indexOf(key)
+  if (idx === -1) form.page_permissions.push(key)
+  else form.page_permissions.splice(idx, 1)
+}
 
 const columns = [
   { key: 'name', label: 'User' },
@@ -126,13 +156,13 @@ const columns = [
 
 function openCreate() {
   editingItem.value = null
-  Object.assign(form, defaultForm)
+  Object.assign(form, { ...defaultForm, page_permissions: [] })
   showModal.value = true
 }
 
 function openEdit(item) {
   editingItem.value = item
-  Object.assign(form, { ...defaultForm, ...item, password: '' })
+  Object.assign(form, { ...defaultForm, ...item, password: '', page_permissions: [...(item.page_permissions || [])] })
   showModal.value = true
 }
 
@@ -144,7 +174,15 @@ function confirmDelete(item) {
 async function handleSubmit() {
   if (!form.name || !form.email) return
   submitting.value = true
-  const payload = { ...form }
+  const payload = {
+    name: form.name,
+    email: form.email,
+    password: form.password,
+    role: form.role,
+    team: form.team,
+    is_active: form.is_active,
+    page_permissions: [...form.page_permissions],
+  }
   if (!payload.password) delete payload.password
   try {
     if (editingItem.value) {

@@ -27,6 +27,8 @@
         <router-view />
       </main>
     </div>
+
+    <ToastContainer />
   </div>
 </template>
 
@@ -34,6 +36,7 @@
 import { ref } from 'vue'
 import Sidebar from './Sidebar.vue'
 import Navbar from './Navbar.vue'
+import ToastContainer from '../common/ToastContainer.vue'
 
 const sidebarOpen = ref(true)
 const mobileSidebarOpen = ref(false)
