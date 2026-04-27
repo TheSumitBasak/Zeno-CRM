@@ -1,26 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: mysql:8.0
-    container_name: zeno-db
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: zeno_crm
-      MYSQL_USER: zeno_user
-      MYSQL_PASSWORD: zeno_pass
-    volumes:
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-      - db_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
-      interval: 30s
-      timeout: 30s
-      retries: 5
-
   backend:
     image: php:8.2-apache
     container_name: zeno-backend
@@ -28,10 +8,11 @@ services:
     volumes:
       - ./backend:/var/www/html
     environment:
-      DB_HOST: db
-      DB_NAME: zeno_crm
-      DB_USER: zeno_user
-      DB_PASS: zeno_pass
+      DB_HOST: shuttle.proxy.rlwy.net
+      DB_PORT: 49500
+      DB_USER: root
+      DB_PASSWORD: kKstpHtYMOihIMGuSTbrcWvjYjLTsDAx
+      DB_NAME: railway
       JWT_SECRET: zeno_crm_jwt_secret_key_2024
     ports:
       - "8080:80"
